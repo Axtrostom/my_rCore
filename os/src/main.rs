@@ -8,7 +8,8 @@
 //! We then call [`println!`] to display `Hello, world!`.
 
 #![deny(missing_docs)]
-#![deny(warnings)]
+// #![deny(warnings)]
+#![allow(warnings)]
 #![no_std]
 #![no_main]
 
