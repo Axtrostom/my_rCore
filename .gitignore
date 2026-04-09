@@ -1,0 +1,7 @@
+# 忽略 Cargo 编译产生的缓存和二进制文件
+target/
+Cargo.lock
+
+# 忽略临时文件或编辑器配置 (可选)
+.vscode/
+*.swp
