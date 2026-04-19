@@ -8,7 +8,8 @@ use alloc::vec::Vec;
 use core::fmt::{self, Debug, Formatter};
 use lazy_static::*;
 
-/// manage a frame which has the same lifecycle as the tracker
+/// 帧追踪器，包含一个物理页号，当帧追踪器被销毁时，会自动释放对应的物理页
+/// 可以理解为是一个智能指针，负责管理物理页的生命周期，当帧追踪器被销毁时，会调用frame_dealloc函数释放对应的物理页
 pub struct FrameTracker {
     pub ppn: PhysPageNum,
 }
@@ -35,7 +36,7 @@ impl Drop for FrameTracker {
         frame_dealloc(self.ppn);
     }
 }
-
+//帧分配器，负责分配和回收物理页，可以使用栈式分配器实现，维护一个当前可用的物理页号范围和一个回收的物理页号列表，当分配时先从回收列表中分配，如果回收列表为空则从当前范围中分配，当回收时将物理页号加入回收列表
 trait FrameAllocator {
     fn new() -> Self;
     fn alloc(&mut self) -> Option<PhysPageNum>;
@@ -43,6 +44,7 @@ trait FrameAllocator {
 }
 
 /// an implementation for frame allocator
+/// 维护有哪些可用物理页，哪些物理页还没被分配
 pub struct StackFrameAllocator {
     current: usize,
     end: usize,
@@ -55,6 +57,7 @@ impl StackFrameAllocator {
         self.end = r.0;
     }
 }
+//实现FrameAllocator trait，提供分配和回收物理页的功能
 impl FrameAllocator for StackFrameAllocator {
     fn new() -> Self {
         Self {

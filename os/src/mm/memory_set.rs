@@ -48,7 +48,7 @@ impl MemorySet {
     pub fn token(&self) -> usize {
         self.page_table.token()
     }
-    /// Assume that no conflicts.
+    /// 对外暴露的插入逻辑段的接口
     pub fn insert_framed_area(
         &mut self,
         start_va: VirtAddr,
@@ -60,6 +60,8 @@ impl MemorySet {
             None,
         );
     }
+    //在当前地址空间插入一个新的逻辑段
+    //data 是额外可以写入的数据
     fn push(&mut self, mut map_area: MapArea, data: Option<&[u8]>) {
         map_area.map(&mut self.page_table);
         if let Some(data) = data {
@@ -75,7 +77,7 @@ impl MemorySet {
             PTEFlags::R | PTEFlags::X,
         );
     }
-    /// Without kernel stacks.
+    /// 生成内核地址空间
     pub fn new_kernel() -> Self {
         let mut memory_set = Self::new_bare();
         // map trampoline
@@ -269,11 +271,13 @@ impl MemorySet {
 }
 
 /// map area structure, controls a contiguous piece of virtual memory
+/// 
+/// 描述一段连续虚拟空间
 pub struct MapArea {
-    vpn_range: VPNRange,
-    data_frames: BTreeMap<VirtPageNum, FrameTracker>,
-    map_type: MapType,
-    map_perm: MapPermission,
+    vpn_range: VPNRange,//虚拟空间范围
+    data_frames: BTreeMap<VirtPageNum, FrameTracker>,//虚拟页号到物理页的映射，但是这里是为了实现生命周期管理，真正的映射关系是通过页表实现的
+    map_type: MapType,//映射算法策略，定义了这个虚拟页范围内的页面，采用何种规则去寻找物理页。
+    map_perm: MapPermission,//映射权限，对应页表项中的权限位
 }
 
 impl MapArea {
@@ -366,8 +370,8 @@ impl MapArea {
 #[derive(Copy, Clone, PartialEq, Debug)]
 /// map type for memory set: identical or framed
 pub enum MapType {
-    Identical,
-    Framed,
+    Identical,//虚拟页号和物理页号相同，适用于内核空间的映射
+    Framed,//虚拟页号和物理页号不同，适用于用户空间的映射，每个虚拟页会分配一个物理页
 }
 
 bitflags! {
