@@ -7,7 +7,7 @@ use lazy_static::*;
 ///Pid Allocator struct
 pub struct PidAllocator {
     current: usize,
-    recycled: Vec<usize>,
+    recycled: Vec<usize>,//装的是空闲pid,空闲进程标识符
 }
 
 impl PidAllocator {
@@ -58,8 +58,9 @@ pub fn pid_alloc() -> PidHandle {
 }
 
 /// Return (bottom, top) of a kernel stack in kernel space.
+/// 通过 pid 得到相的 内核栈 起始地址 和 结束地址
 pub fn kernel_stack_position(app_id: usize) -> (usize, usize) {
-    let top = TRAMPOLINE - app_id * (KERNEL_STACK_SIZE + PAGE_SIZE);
+    let top = TRAMPOLINE - app_id * (KERNEL_STACK_SIZE + PAGE_SIZE);//TRAMPOLINE 是内核栈的最高地址
     let bottom = top - KERNEL_STACK_SIZE;
     (bottom, top)
 }
@@ -81,7 +82,7 @@ impl KernelStack {
         KernelStack { pid: pid_handle.0 }
     }
     #[allow(unused)]
-    ///Push a value on top of kernelstack
+    ///将一个值压入内核栈顶，并返回这个值在内核栈中的地址
     pub fn push_on_top<T>(&self, value: T) -> *mut T
     where
         T: Sized,

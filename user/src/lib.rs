@@ -63,18 +63,19 @@ pub fn fork() -> isize {
 pub fn exec(path: &str) -> isize {
     sys_exec(path)
 }
+//等待任意子进程结束
 pub fn wait(exit_code: &mut i32) -> isize {
     loop {
         match sys_waitpid(-1, exit_code as *mut _) {
-            -2 => {
-                yield_();
+            -2 => {//没有子进程结束
+                yield_();//让出 CPU 给其他进程
             }
             // -1 or a real pid
             exit_pid => return exit_pid,
         }
     }
 }
-
+//等待特定子进程结束
 pub fn waitpid(pid: usize, exit_code: &mut i32) -> isize {
     loop {
         match sys_waitpid(pid as isize, exit_code as *mut _) {

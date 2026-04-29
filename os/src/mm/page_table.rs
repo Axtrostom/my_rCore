@@ -173,20 +173,24 @@ pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&
     v
 }
 /// translate a pointer to a mutable u8 Vec end with `\0` through page table to a `String`
+/// 通过页表将一个指向以 `\0` 结尾的可变 u8 裸指针 翻译成一个 `String`
+/// 通过 token 指明那个进程
+/// 通过 ptr 指明进程的虚拟地址空间中的一个指针，指向一个以 `\0` 结尾的字符串   
+/// 这个函数就是在内核态下，怎么读取进程的虚拟地址空间中的字符串
 pub fn translated_str(token: usize, ptr: *const u8) -> String {
-    let page_table = PageTable::from_token(token);
+    let page_table = PageTable::from_token(token);//通过 satp 寄存器获得页表，即获得对应进程的 虚拟地址 到 物理地址 的映射关系  
     let mut string = String::new();
-    let mut va = ptr as usize;
+    let mut va = ptr as usize;//将指针转换成 usize 类型的虚拟地址
     loop {
         let ch: u8 = *(page_table
-            .translate_va(VirtAddr::from(va))
-            .unwrap()
-            .get_mut());
+            .translate_va(VirtAddr::from(va))//翻译成物理地址
+            .unwrap()//解包
+            .get_mut());//获得物理地址的可变引用
         if ch == 0 {
-            break;
+            break;//如果遇到 `\0` 就停止
         } else {
-            string.push(ch as char);
-            va += 1;
+            string.push(ch as char);//否则将字符加入字符串
+            va += 1;//继续翻译下一个字符
         }
     }
     string

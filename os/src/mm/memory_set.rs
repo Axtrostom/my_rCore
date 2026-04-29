@@ -73,6 +73,7 @@ impl MemorySet {
             self.areas.remove(idx);
         }
     }
+    
     fn push(&mut self, mut map_area: MapArea, data: Option<&[u8]>) {
         map_area.map(&mut self.page_table);
         if let Some(data) = data {
@@ -81,11 +82,12 @@ impl MemorySet {
         self.areas.push(map_area);
     }
     /// Mention that trampoline is not collected by areas.
+    /// 建立跳板页 trapoline 的映射
     fn map_trampoline(&mut self) {
-        self.page_table.map(
-            VirtAddr::from(TRAMPOLINE).into(),
-            PhysAddr::from(strampoline as usize).into(),
-            PTEFlags::R | PTEFlags::X,
+        self.page_table.map(//直接插入映射关系
+            VirtAddr::from(TRAMPOLINE).into(),//跳板页的虚拟地址
+            PhysAddr::from(strampoline as usize).into(),//跳板页物理地址
+            PTEFlags::R | PTEFlags::X,//权限
         );
     }
     /// Without kernel stacks.
@@ -235,18 +237,18 @@ impl MemorySet {
     }
     ///Clone a same `MemorySet`
     pub fn from_existed_user(user_space: &Self) -> Self {
-        let mut memory_set = Self::new_bare();
+        let mut memory_set = Self::new_bare();//创建一个空的 `MemorySet`
         // map trampoline
-        memory_set.map_trampoline();
+        memory_set.map_trampoline();//设置跳板页映射
         // copy data sections/trap_context/user_stack
-        for area in user_space.areas.iter() {
-            let new_area = MapArea::from_another(area);
-            memory_set.push(new_area, None);
+        for area in user_space.areas.iter() {//遍历复制 MapArea
+            let new_area = MapArea::from_another(area);//通过另外一个 `MapArea` 创建一个新的 `MapArea`，但不复制数据    
+            memory_set.push(new_area, None);//给新的 `MapArea` 建立映射关系
             // copy data from another space
-            for vpn in area.vpn_range {
-                let src_ppn = user_space.translate(vpn).unwrap().ppn();
-                let dst_ppn = memory_set.translate(vpn).unwrap().ppn();
-                dst_ppn
+            for vpn in area.vpn_range {//遍历 MapArea 中的虚拟页号范围  
+                let src_ppn = user_space.translate(vpn).unwrap().ppn();//输入的MemorySet物理页号
+                let dst_ppn = memory_set.translate(vpn).unwrap().ppn();//当前新建的MemorySet物理页号
+                dst_ppn//复制数据
                     .get_bytes_array()
                     .copy_from_slice(src_ppn.get_bytes_array());
             }
@@ -295,12 +297,13 @@ impl MapArea {
             map_perm,
         }
     }
+    //通过另外一个 `MapArea` 创建一个新的 `MapArea`，但不复制数据
     pub fn from_another(another: &Self) -> Self {
         Self {
-            vpn_range: VPNRange::new(another.vpn_range.get_start(), another.vpn_range.get_end()),
-            data_frames: BTreeMap::new(),
-            map_type: another.map_type,
-            map_perm: another.map_perm,
+            vpn_range: VPNRange::new(another.vpn_range.get_start(), another.vpn_range.get_end()),//复制虚拟页号范围
+            data_frames: BTreeMap::new(),//为什么这里数据帧是新建的而不是复制过来的？因为这里只是创建一个空的 `MapArea`，数据帧会在后续的复制过程中被填充
+            map_type: another.map_type,//复制映射类型
+            map_perm: another.map_perm,//复制映射权限
         }
     }
     pub fn map_one(&mut self, page_table: &mut PageTable, vpn: VirtPageNum) {

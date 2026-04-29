@@ -26,25 +26,25 @@ pub fn sys_getpid() -> isize {
 }
 
 pub fn sys_fork() -> isize {
-    let current_task = current_task().unwrap();
-    let new_task = current_task.fork();
-    let new_pid = new_task.pid.0;
+    let current_task = current_task().unwrap();//获取当前任务控制块
+    let new_task = current_task.fork();//通过当前任务控制块创建一个新的任务控制块   
+    let new_pid = new_task.pid.0;//获取新任务的 pid
     // modify trap context of new_task, because it returns immediately after switching
-    let trap_cx = new_task.inner_exclusive_access().get_trap_cx();
+    let trap_cx = new_task.inner_exclusive_access().get_trap_cx();//获取新任务的 trap context 的可变引用
     // we do not have to move to next instruction since we have done it before
     // for child process, fork returns 0
-    trap_cx.x[10] = 0;
+    trap_cx.x[10] = 0;//修改子进程的 trap context 中 a0 寄存器的值为 0，使得子进程在切换后能够正确返回到 fork 调用处，并且 fork 返回值为 0，区分父子进程
     // add new task to scheduler
-    add_task(new_task);
-    new_pid as isize
+    add_task(new_task);//把新任务加入调度器
+    new_pid as isize//返回新任务的 pid
 }
 
 pub fn sys_exec(path: *const u8) -> isize {
-    let token = current_user_token();
-    let path = translated_str(token, path);
-    if let Some(data) = get_app_data_by_name(path.as_str()) {
-        let task = current_task().unwrap();
-        task.exec(data);
+    let token = current_user_token();//获取当前进程的页表 token 
+    let path = translated_str(token, path);//通过页表将用户空间的 path 指针翻译成内核空间的字符串
+    if let Some(data) = get_app_data_by_name(path.as_str()) {//通过文件名获取应用程序的数据
+        let task = current_task().unwrap();//获取当前任务控制块
+        task.exec(data);//通过 elf 文件创建一个新的任务控制块，作为当前进程的子进程
         0
     } else {
         -1
