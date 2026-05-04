@@ -7,11 +7,11 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 use spin::{Mutex, MutexGuard};
 /// Virtual filesystem layer over easy-fs
-pub struct Inode {
-    block_id: usize,
-    block_offset: usize,
-    fs: Arc<Mutex<EasyFileSystem>>,
-    block_device: Arc<dyn BlockDevice>,
+pub struct Inode {//索引节点
+    block_id: usize,//所在的 块id
+    block_offset: usize,//块内偏移量
+    fs: Arc<Mutex<EasyFileSystem>>,//对文件系统的引用计数
+    block_device: Arc<dyn BlockDevice>,//对块设备的引用计数
 }
 
 impl Inode {

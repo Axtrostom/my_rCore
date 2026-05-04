@@ -70,6 +70,7 @@ pub fn current_task() -> Option<Arc<TaskControlBlock>> {
     PROCESSOR.exclusive_access().current()
 }
 ///Get token of the address space of current task
+/// 得到当前用户的地址空间，或者说获得当前用户的页表
 pub fn current_user_token() -> usize {
     let task = current_task().unwrap();
     let token = task.inner_exclusive_access().get_user_token();

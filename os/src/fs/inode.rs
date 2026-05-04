@@ -97,6 +97,8 @@ impl OpenFlags {
     }
 }
 ///Open file with flags
+/// 
+/// 
 pub fn open_file(name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
     let (readable, writable) = flags.read_write();
     if flags.contains(OpenFlags::CREATE) {

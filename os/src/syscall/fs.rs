@@ -43,11 +43,16 @@ pub fn sys_read(fd: usize, buf: *const u8, len: usize) -> isize {
     }
 }
 
+/// 功能：打开一个常规文件，并返回可以访问它的文件描述符。
+/// 参数：path 描述要打开的文件的文件名（简单起见，文件系统不需要支持目录，所有的文件都放在根目录 / 下），
+/// flags 描述打开文件的标志，具体含义下面给出。
+/// 返回值：如果出现了错误则返回 -1，否则返回打开常规文件的文件描述符。可能的错误原因是：文件不存在。
+/// syscall ID：56
 pub fn sys_open(path: *const u8, flags: u32) -> isize {
-    let task = current_task().unwrap();
-    let token = current_user_token();
-    let path = translated_str(token, path);
-    if let Some(inode) = open_file(path.as_str(), OpenFlags::from_bits(flags).unwrap()) {
+    let task = current_task().unwrap();//获取当前任务信息
+    let token = current_user_token();//得到当前用户的地址空间，或者说获得当前用户的页表
+    let path = translated_str(token, path);//读取字符串，获取路径
+    if let Some(inode) = open_file(path.as_str(), OpenFlags::from_bits(flags).unwrap()) {//执行
         let mut inner = task.inner_exclusive_access();
         let fd = inner.alloc_fd();
         inner.fd_table[fd] = Some(inode);
@@ -57,10 +62,14 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
     }
 }
 
+
+/// 功能：当前进程关闭一个文件。
+/// 参数：fd 表示要关闭的文件的文件描述符。
+/// 返回值：如果成功关闭则返回 0 ，否则返回 -1 。可能的出错原因：传入的文件描述符并不对应一个打开的文件。
 pub fn sys_close(fd: usize) -> isize {
-    let task = current_task().unwrap();
-    let mut inner = task.inner_exclusive_access();
-    if fd >= inner.fd_table.len() {
+    let task = current_task().unwrap();//获取当前任务信息
+    let mut inner = task.inner_exclusive_access();//获取当前任务的独占访问权限
+    if fd >= inner.fd_table.len() {//如果传入的文件描述符超过了当前任务的文件描述符表的长度，说明这个文件描述符不合法，返回 -1
         return -1;
     }
     if inner.fd_table[fd].is_none() {
@@ -69,3 +78,5 @@ pub fn sys_close(fd: usize) -> isize {
     inner.fd_table[fd].take();
     0
 }
+
+
